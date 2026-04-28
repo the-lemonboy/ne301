@@ -73,7 +73,12 @@
          },
          .video_stream_mode = {
              .enable = AICAM_FALSE,
-             .rtsp_server_url = "rtsp://server.example.com/live"
+             .rtsp_server_url = "rtsp://server.example.com/live",
+             .rtsp_enable = AICAM_FALSE,
+             .rtsp_port = 554,
+             .rtsp_auth_mode = "none",
+             .rtsp_username = "",
+             .rtsp_password = ""
          },
          .io_trigger = {
              {   // IO trigger 0

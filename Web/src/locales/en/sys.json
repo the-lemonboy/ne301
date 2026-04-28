@@ -141,7 +141,25 @@
       "reconnecting": "Reconnecting",
       "connecting": "Connecting",
       "connected": "Connected",
-      "disconnected": "Disconnected"
+      "disconnected": "Disconnected",
+      "rtsp": {
+        "enable": "Enable RTSP Service",
+        "port": "Service Port",
+        "port_error": "Port must be 1-65535",
+        "auth_mode": "Authentication",
+        "auth_none": "No Auth (Recommended for private network)",
+        "auth_digest": "Digest Auth (Recommended for public network)",
+        "username": "Username",
+        "password": "Password",
+        "username_required": "Username is required",
+        "password_required": "Password is required",
+        "stream_url": "Stream URL",
+        "video_stream": "Stream",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copy_failed": "Copy failed",
+        "config_saved": "RTSP config saved"
+      }
     },
     "model_verification": { 
       "model_verification_title": "Model Validation",

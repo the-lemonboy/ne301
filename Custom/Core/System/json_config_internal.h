@@ -318,6 +318,11 @@
  #define NVS_KEY_TIMER_WEEKDAYS_PREFIX "timer_weekdays_"
  // Video Stream
  #define NVS_KEY_RTSP_URL            "rtsp_url"
+ #define NVS_KEY_RTSP_ENABLE         "rtsp_en"
+ #define NVS_KEY_RTSP_PORT           "rtsp_port"
+ #define NVS_KEY_RTSP_AUTH_MODE      "rtsp_auth"
+ #define NVS_KEY_RTSP_USERNAME       "rtsp_user"
+ #define NVS_KEY_RTSP_PASSWORD       "rtsp_pass"
  
  
  /* ==================== Internal Function Prototypes ==================== */

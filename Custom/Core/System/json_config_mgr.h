@@ -102,6 +102,13 @@ typedef struct {
     aicam_bool_t rtmp_enable;               // RTMP streaming enable
     char rtmp_url[256];                     // RTMP server URL
     char rtmp_stream_key[128];              // Stream key
+
+    // RTSP server configuration
+    aicam_bool_t rtsp_enable;               // RTSP service enable
+    uint16_t rtsp_port;                     // RTSP listen port (default 554)
+    char rtsp_auth_mode[16];                // Auth mode: "none" or "digest"
+    char rtsp_username[64];                 // Auth username
+    char rtsp_password[64];                 // Auth password
 } video_stream_mode_config_t;
  
 // Work mode configuration structure

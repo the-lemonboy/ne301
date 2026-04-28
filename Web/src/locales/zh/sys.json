@@ -140,7 +140,25 @@
       "reconnecting": "重连中",
       "connecting": "连接中",
       "connected": "已连接",
-      "disconnected": "未连接"
+      "disconnected": "未连接",
+      "rtsp": {
+        "enable": "启用 RTSP 服务",
+        "port": "服务端口",
+        "port_error": "端口范围 1-65535",
+        "auth_mode": "认证模式",
+        "auth_none": "关闭认证（专网推荐）",
+        "auth_digest": "摘要认证（公网推荐）",
+        "username": "用户名",
+        "password": "密码",
+        "username_required": "请输入用户名",
+        "password_required": "请输入密码",
+        "stream_url": "流媒体地址",
+        "video_stream": "视频流",
+        "copy": "复制",
+        "copied": "已复制",
+        "copy_failed": "复制失败",
+        "config_saved": "RTSP 配置已保存"
+      }
     },
     "model_verification": {
       "model_verification_title": "模型验证",
