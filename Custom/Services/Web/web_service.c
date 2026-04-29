@@ -20,6 +20,7 @@
 #include "api_ota_module.h"
 #include "api_rtmp_module.h"
 #include "api_rtsp_module.h"
+#include "api_webhook_module.h"
 #include "api_preview_module.h"
 #include "api_isp_module.h"
 #include <string.h>
@@ -85,6 +86,7 @@ aicam_result_t web_service_init(void *config)
     web_api_register_ota_module();
     web_api_register_rtmp_module();
     web_api_register_rtsp_module();
+    web_api_register_webhook_module();
     web_api_register_preview_module();
     web_api_register_isp_module();
 

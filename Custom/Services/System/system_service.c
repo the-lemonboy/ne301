@@ -28,6 +28,7 @@
 #include "nn.h"
 #include "quick_snapshot.h"
 #include "cJSON.h"
+#include "webhook_service.h"
  
  
  /* ==================== System Controller Implementation ==================== */
@@ -3513,9 +3514,20 @@ aicam_result_t system_service_capture_and_upload_mqtt(aicam_bool_t enable_ai,
         step_duration = step_end_time - step_start_time;
         LOG_SVC_INFO("[TIMING] Step 4 COMPLETED: MQTT upload finished (duration: %lu ms)", 
                      (unsigned long)step_duration);
-    } 
-                
-        
+    }
+
+
+    // Step 4.5: Webhook push (non-blocking, fire-and-forget)
+    if (webhook_service_is_enabled() && jpeg_buffer) {
+        static const char *wh_trigger_names[] = {
+            "IO", "RTC_WAKEUP", "PIR", "BUTTON", "REMOTE", "WUFI", "RTC", "WEB"
+        };
+        const char *wh_trigger = (trigger_type < sizeof(wh_trigger_names)/sizeof(wh_trigger_names[0]))
+            ? wh_trigger_names[trigger_type] : "UNKNOWN";
+        char wh_ts[32];
+        snprintf(wh_ts, sizeof(wh_ts), "%llu", (unsigned long long)rtc_get_timeStamp());
+        webhook_service_push_capture(jpeg_buffer, (uint32_t)jpeg_size, wh_trigger, wh_ts);
+    }
 
     // Step 5: Cleanup
     step_start_time = rtc_get_uptime_ms();

@@ -182,6 +182,7 @@ C_SOURCES += ../Custom/Services/RTSP/rtsp_service.c
 C_SOURCES += ../Custom/Services/RTSP/rtsp_server.c
 C_SOURCES += ../Custom/Services/RTSP/rtsp_rtp.c
 C_SOURCES += ../Custom/Services/RTSP/rtsp_digest_auth.c
+C_SOURCES += ../Custom/Services/Webhook/webhook_service.c
 C_SOURCES += ../Custom/Services/System/system_service.c
 # video_stream_hub moved to Core/Video
 
@@ -200,6 +201,7 @@ C_SOURCES += ../Custom/Services/Web/api/api_network_module.c
 C_SOURCES += ../Custom/Services/Web/api/api_ota_module.c
 C_SOURCES += ../Custom/Services/Web/api/api_rtmp_module.c
 C_SOURCES += ../Custom/Services/Web/api/api_rtsp_module.c
+C_SOURCES += ../Custom/Services/Web/api/api_webhook_module.c
 C_SOURCES += ../Custom/Services/Web/api/api_preview_module.c
 C_SOURCES += ../Custom/Services/Web/api/api_work_mode_module.c
 C_SOURCES += ../Custom/Services/Web/api/api_business_error.c
@@ -839,6 +841,7 @@ C_INCLUDES += -I../Custom/Hal/Network/rtmp_push_client
 C_INCLUDES += -I../Custom/Common/Lib/rtmpdump
 C_INCLUDES += -I../Custom/Common/Lib/rtmpdump/librtmp
 C_INCLUDES += -I../Custom/Services/RTSP
+C_INCLUDES += -I../Custom/Services/Webhook
 
 # Drivers - HAL & CMSIS
 C_INCLUDES += -I../Drivers/STM32N6xx_HAL_Driver/Inc

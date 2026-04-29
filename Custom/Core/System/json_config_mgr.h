@@ -490,6 +490,18 @@ typedef struct {
     char admin_password[64];                           // Admin password (default: "hicamthink")
 } auth_mgr_config_t;
 
+/* ==================== Webhook Configuration ==================== */
+
+#define WEBHOOK_URL_MAX_LEN     256
+#define WEBHOOK_SECRET_MAX_LEN  128
+
+typedef struct {
+    aicam_bool_t enable;                          // Webhook enable switch
+    char url[WEBHOOK_URL_MAX_LEN];                // HTTP(S) push URL
+    char auth_type[16];                           // "none" | "bearer" | "basic" | "custom"
+    char secret[WEBHOOK_SECRET_MAX_LEN];          // Auth token/credentials
+} webhook_config_t;
+
 // RTMP config is now part of video_stream_mode_config_t
 // These macros are kept for compatibility
 #define RTMP_CONFIG_MAX_URL_LENGTH         256
@@ -511,6 +523,7 @@ typedef struct {
     network_service_config_t network_service;
     mqtt_service_config_t mqtt_service;
     auth_mgr_config_t auth_mgr;
+    webhook_config_t webhook_config;
     // RTMP config is now in work_mode_config.video_stream_mode
  } aicam_global_config_t;
  
@@ -927,7 +940,36 @@ aicam_result_t json_config_get_video_stream_mode(video_stream_mode_config_t *con
  * @return aicam_result_t Operation result
  */
 aicam_result_t json_config_set_video_stream_mode(const video_stream_mode_config_t *config);
- 
+
+/**
+ * @brief Get webhook configuration
+ */
+aicam_result_t json_config_get_webhook_config(webhook_config_t *config);
+
+/**
+ * @brief Set webhook configuration
+ */
+aicam_result_t json_config_set_webhook_config(const webhook_config_t *config);
+
+/**
+ * @brief Get webhook custom CA certificate (from LittleFS file)
+ * @param cert_data Output buffer (caller must free with buffer_free). NULL if no cert.
+ * @param cert_len Output length (0 if no cert)
+ */
+aicam_result_t json_config_get_webhook_ca_cert(char **cert_data, size_t *cert_len);
+
+/**
+ * @brief Save webhook custom CA certificate to LittleFS, store path in NVS
+ * @param cert_data PEM data
+ * @param cert_len Length of PEM data
+ */
+aicam_result_t json_config_set_webhook_ca_cert(const char *cert_data, size_t cert_len);
+
+/**
+ * @brief Delete webhook custom CA certificate (file + NVS path)
+ */
+aicam_result_t json_config_delete_webhook_ca_cert(void);
+
  /* ==================== Convenient Access Macro Definitions ==================== */
  
 // Macros for quick access to debug configuration

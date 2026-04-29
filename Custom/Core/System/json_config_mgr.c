@@ -1526,3 +1526,19 @@ const char* poe_status_code_to_string(poe_status_code_t status)
 
 // Note: json_config_get_video_stream_mode and json_config_set_video_stream_mode
 // are implemented in json_config_nvs.c for direct NVS access
+
+aicam_result_t json_config_get_webhook_config(webhook_config_t *config)
+{
+    if (!config) return AICAM_ERROR_INVALID_PARAM;
+    return json_config_load_webhook_from_nvs(config);
+}
+
+aicam_result_t json_config_set_webhook_config(const webhook_config_t *config)
+{
+    if (!config) return AICAM_ERROR_INVALID_PARAM;
+    aicam_result_t result = json_config_save_webhook_config_to_nvs(config);
+    if (result == AICAM_OK) {
+        memcpy(&g_json_config_ctx.current_config.webhook_config, config, sizeof(webhook_config_t));
+    }
+    return result;
+}
