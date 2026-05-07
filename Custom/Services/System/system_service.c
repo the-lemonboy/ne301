@@ -3684,11 +3684,30 @@ aicam_result_t system_service_capture_and_upload_mqtt(aicam_bool_t enable_ai,
 
     // Step 4.5: Webhook push (non-blocking, fire-and-forget)
     if (webhook_service_is_enabled() && jpeg_buffer) {
-        aicam_result_t wh_ret = webhook_service_push_capture(
-            jpeg_buffer, (uint32_t)jpeg_size, &metadata, ai_result_ptr);
-        if (wh_ret == AICAM_OK) {
-            // Ownership transferred to webhook task — skip cleanup in Step 5
-            jpeg_buffer = NULL;
+        /* Webhook task uses buffer_free() to release jpeg_data, so the buffer
+         * must be a buffer_calloc allocation.  If jpeg_buffer is still the
+         * camera driver's buffer (jpeg_copy == NULL), make a heap copy and
+         * return the camera buffer immediately. */
+        if (!jpeg_copy) {
+            uint8_t *wh_buf = buffer_calloc(1, jpeg_size);
+            if (wh_buf) {
+                memcpy(wh_buf, jpeg_buffer, jpeg_size);
+                device_service_camera_free_jpeg_buffer(jpeg_buffer);
+                jpeg_buffer = wh_buf;
+                jpeg_copy = wh_buf;
+            } else {
+                LOG_SVC_WARN("Webhook: failed to copy jpeg for push");
+            }
+        }
+
+        // Only push if buffer is confirmed to be a buffer_calloc allocation
+        if (jpeg_buffer && jpeg_copy && jpeg_buffer == jpeg_copy) {
+            aicam_result_t wh_ret = webhook_service_push_capture(
+                jpeg_buffer, (uint32_t)jpeg_size, &metadata, ai_result_ptr);
+            if (wh_ret == AICAM_OK) {
+                // Ownership transferred to webhook task — skip cleanup in Step 5
+                jpeg_buffer = NULL;
+            }
         }
     }
 

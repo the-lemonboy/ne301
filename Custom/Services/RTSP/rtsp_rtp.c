@@ -10,12 +10,13 @@
 #include "lwip/sockets.h"
 #include "lwip/inet.h"
 
-/* ==================== Static TX buffer (avoids stack overflow in encoder task) ==================== */
+/* ==================== Static TX buffer (saves ~1.4KB stack per call) ==================== */
 
 /*
- * All RTP sending is serialized via rtsp_on_frame which holds the RTSP mutex,
- * so a single static buffer is safe. Using ~1.4KB stack per call in the
- * encoder task context was causing system reboots.
+ * THREAD SAFETY: s_rtp_tx_buf and the static NAL arrays in rtsp_rtp_send_frame
+ * are protected by the RTSP service mutex.  rtsp_on_frame acquires the mutex
+ * before calling any of these functions, serializing all access.
+ * DO NOT call these functions without holding g_rtsp_ctx.mutex.
  */
 static uint8_t s_rtp_tx_buf[RTP_HEADER_SIZE + RTP_MAX_PAYLOAD + 2];
 

@@ -699,6 +699,11 @@ static void rtsp_accept_client(void)
 
 static void rtsp_handle_client_data(rtsp_client_t *client)
 {
+    /* Defensive: client may have been disconnected between the select snapshot
+     * and this call (kick/stop from another thread).  The pointer itself is
+     * always valid (static array), but sockets may be closed. */
+    if (!client->in_use || client->tcp_socket < 0) return;
+
     /* Static to avoid ~2KB stack allocation (RTSP task is single-threaded) */
     static char s_recv_buf[RTSP_RECV_BUF_SIZE];
     memset(s_recv_buf, 0, sizeof(s_recv_buf));

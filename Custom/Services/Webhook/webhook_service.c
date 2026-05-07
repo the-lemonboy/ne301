@@ -569,6 +569,7 @@ static aicam_result_t webhook_do_push(const uint8_t *jpeg_data, uint32_t jpeg_si
     if (use_https) {
         if (webhook_build_tls_config(&tls_config, &custom_ca_cert) != AICAM_OK) {
             LOG_SVC_ERROR("Webhook: failed to build TLS config");
+            if (custom_ca_cert) buffer_free(custom_ca_cert);
             buffer_free(body);
             return AICAM_ERROR;
         }

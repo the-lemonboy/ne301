@@ -42,6 +42,8 @@ typedef struct rtsp_client rtsp_client_t;
 
 /**
  * @brief Send an H.264 frame as RTP packets to a client
+ * @note  Caller MUST hold the RTSP service mutex — these functions use shared
+ *        static buffers (s_rtp_tx_buf, NAL parse arrays) for stack savings.
  * @param client RTSP client with RTP socket info
  * @param data Frame data in Annex-B format
  * @param size Frame data size
@@ -55,11 +57,7 @@ aicam_result_t rtsp_rtp_send_frame(rtsp_client_t *client,
 
 /**
  * @brief Send a single NAL unit as one RTP packet
- * @param client RTSP client
- * @param data NAL unit data
- * @param size NAL unit size
- * @param timestamp RTP timestamp (already converted)
- * @param marker Set marker bit (1 for last packet of frame)
+ * @note  Caller MUST hold the RTSP service mutex (see rtsp_rtp_send_frame).
  */
 aicam_result_t rtsp_rtp_send_single_nal(rtsp_client_t *client,
                                           const uint8_t *data, uint32_t size,
@@ -67,11 +65,7 @@ aicam_result_t rtsp_rtp_send_single_nal(rtsp_client_t *client,
 
 /**
  * @brief Send a NAL unit using FU-A fragmentation
- * @param client RTSP client
- * @param data NAL unit data
- * @param size NAL unit size
- * @param timestamp RTP timestamp (already converted)
- * @param marker Set marker bit on last fragment (1 for last NAL of frame)
+ * @note  Caller MUST hold the RTSP service mutex (see rtsp_rtp_send_frame).
  */
 aicam_result_t rtsp_rtp_send_fu_a(rtsp_client_t *client,
                                     const uint8_t *data, uint32_t size,

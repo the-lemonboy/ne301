@@ -161,14 +161,15 @@ static aicam_result_t rtsp_status_handler(http_handler_context_t* ctx)
 
     aicam_bool_t running = rtsp_service_is_running();
 
-    /* Build stream URL */
+    /* Build stream URL using the device's own IP */
     char stream_url[256] = {0};
     if (running) {
-        const char *ip = ctx->request.client_ip;
-        if (ip && ip[0]) {
+        char device_ip[64];
+        rtsp_service_get_device_ip(device_ip, sizeof(device_ip));
+        if (device_ip[0]) {
             snprintf(stream_url, sizeof(stream_url),
                      "rtsp://%s:%lu/live/stream",
-                     ip, (unsigned long)vs_config.rtsp_port);
+                     device_ip, (unsigned long)vs_config.rtsp_port);
         } else {
             snprintf(stream_url, sizeof(stream_url),
                      "rtsp://device:%lu/live/stream",
