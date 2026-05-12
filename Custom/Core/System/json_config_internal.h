@@ -316,10 +316,24 @@
  #define NVS_KEY_TIMER_NODE_COUNT    "timer_node_count"
  #define NVS_KEY_TIMER_NODE_PREFIX   "timer_node_"
  #define NVS_KEY_TIMER_WEEKDAYS_PREFIX "timer_weekdays_"
+ #define NVS_KEY_TIMER_INTERVAL_MODE  "timer_iv_mode"
+ #define NVS_KEY_TIMER_START_TIME     "timer_start_t"
  // Video Stream
  #define NVS_KEY_RTSP_URL            "rtsp_url"
- 
- 
+ #define NVS_KEY_RTSP_ENABLE         "rtsp_en"
+ #define NVS_KEY_RTSP_PORT           "rtsp_port"
+ #define NVS_KEY_RTSP_AUTH_MODE      "rtsp_auth"
+ #define NVS_KEY_RTSP_USERNAME       "rtsp_user"
+ #define NVS_KEY_RTSP_PASSWORD       "rtsp_pass"
+
+// Webhook configuration key names
+#define NVS_KEY_WEBHOOK_ENABLE      "wh_enable"
+#define NVS_KEY_WEBHOOK_URL         "wh_url"
+#define NVS_KEY_WEBHOOK_AUTH_TYPE   "wh_auth"
+#define NVS_KEY_WEBHOOK_SECRET      "wh_secret"
+#define NVS_KEY_WEBHOOK_CA_CERT_PATH "wh_ca_path"
+
+
  /* ==================== Internal Function Prototypes ==================== */
  
  /* --- From json_config_nvs.c --- */
@@ -337,6 +351,8 @@ aicam_result_t json_config_load_poe_config_from_nvs(poe_config_persist_t *config
 aicam_result_t json_config_save_mqtt_service_config_to_nvs(const mqtt_service_config_t *config);
 // RTMP config now part of video_stream_mode, use json_config_get/set_video_stream_mode()
 aicam_result_t json_config_save_auth_mgr_config_to_nvs(const auth_mgr_config_t *config);
+aicam_result_t json_config_save_webhook_config_to_nvs(const webhook_config_t *config);
+aicam_result_t json_config_load_webhook_from_nvs(webhook_config_t *config);
  aicam_result_t json_config_save_to_nvs(const aicam_global_config_t *config);
  aicam_result_t json_config_load_from_nvs(aicam_global_config_t *config);
  

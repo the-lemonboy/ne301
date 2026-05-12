@@ -6,6 +6,9 @@
  */
 
 #include "json_config_internal.h"
+#include "buffer_mgr.h"
+#include "storage.h"
+#include <sys/stat.h>
 
 /* ==================== NVS Storage Implementation ==================== */
 
@@ -161,6 +164,15 @@ aicam_result_t json_config_save_work_mode_config_to_nvs(const work_mode_config_t
         if (result != AICAM_OK)
             LOG_CORE_ERROR("Failed to save timer weekday %d to NVS", i);
     }
+
+    // Save timer interval mode and start time
+    result = json_config_nvs_write_uint8(NVS_KEY_TIMER_INTERVAL_MODE, config->timer_trigger.interval_mode);
+    if (result != AICAM_OK)
+        LOG_CORE_ERROR("Failed to save timer interval mode to NVS");
+
+    result = json_config_nvs_write_uint32(NVS_KEY_TIMER_START_TIME, config->timer_trigger.start_time);
+    if (result != AICAM_OK)
+        LOG_CORE_ERROR("Failed to save timer start time to NVS");
 
     result = json_config_nvs_write_string(NVS_KEY_RTSP_URL, config->video_stream_mode.rtsp_server_url);
     if (result != AICAM_OK)
@@ -331,6 +343,133 @@ aicam_result_t json_config_save_auth_mgr_config_to_nvs(const auth_mgr_config_t *
 
     LOG_CORE_INFO("Auth manager configuration saved to NVS successfully");
     return result;
+}
+
+aicam_result_t json_config_save_webhook_config_to_nvs(const webhook_config_t *config)
+{
+    if (!config) return AICAM_ERROR_INVALID_PARAM;
+
+    aicam_result_t result;
+
+    result = json_config_nvs_write_bool(NVS_KEY_WEBHOOK_ENABLE, config->enable);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save webhook enable to NVS");
+
+    result = json_config_nvs_write_string(NVS_KEY_WEBHOOK_URL, config->url);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save webhook URL to NVS");
+
+    result = json_config_nvs_write_string(NVS_KEY_WEBHOOK_AUTH_TYPE, config->auth_type);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save webhook auth_type to NVS");
+
+    result = json_config_nvs_write_string(NVS_KEY_WEBHOOK_SECRET, config->secret);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save webhook secret to NVS");
+
+    LOG_CORE_INFO("Webhook configuration saved to NVS");
+    return result;
+}
+
+aicam_result_t json_config_load_webhook_from_nvs(webhook_config_t *config)
+{
+    if (!config) return AICAM_ERROR_INVALID_PARAM;
+
+    memset(config, 0, sizeof(webhook_config_t));
+    snprintf(config->auth_type, sizeof(config->auth_type), "none");
+
+    aicam_bool_t temp_bool;
+    if (json_config_nvs_read_bool(NVS_KEY_WEBHOOK_ENABLE, &temp_bool) == AICAM_OK)
+        config->enable = temp_bool;
+
+    json_config_nvs_read_string(NVS_KEY_WEBHOOK_URL, config->url, sizeof(config->url));
+    json_config_nvs_read_string(NVS_KEY_WEBHOOK_AUTH_TYPE, config->auth_type, sizeof(config->auth_type));
+    json_config_nvs_read_string(NVS_KEY_WEBHOOK_SECRET, config->secret, sizeof(config->secret));
+
+    if (config->auth_type[0] == '\0')
+        snprintf(config->auth_type, sizeof(config->auth_type), "none");
+
+    return AICAM_OK;
+}
+
+#define WEBHOOK_CA_CERT_PATH  "/certs/webhook_ca.pem"
+
+aicam_result_t json_config_get_webhook_ca_cert(char **cert_data, size_t *cert_len)
+{
+    if (!cert_data || !cert_len) return AICAM_ERROR_INVALID_PARAM;
+
+    *cert_data = NULL;
+    *cert_len = 0;
+
+    char path[128] = {0};
+    if (json_config_nvs_read_string(NVS_KEY_WEBHOOK_CA_CERT_PATH, path, sizeof(path)) != AICAM_OK || path[0] == '\0') {
+        return AICAM_ERROR;
+    }
+
+    struct stat st = {0};
+    if (flash_lfs_stat(path, &st) != 0 || st.st_size == 0) {
+        return AICAM_ERROR;
+    }
+
+    char *buf = (char *)buffer_calloc(1, st.st_size + 1);
+    if (!buf) return AICAM_ERROR_NO_MEMORY;
+
+    void *fd = flash_lfs_fopen(path, "r");
+    if (!fd) {
+        buffer_free(buf);
+        return AICAM_ERROR;
+    }
+
+    int read_len = flash_lfs_fread(fd, buf, st.st_size);
+    flash_lfs_fclose(fd);
+
+    if (read_len <= 0 || strncmp(buf, "-----BEGIN", 10) != 0) {
+        buffer_free(buf);
+        return AICAM_ERROR;
+    }
+
+    *cert_data = buf;
+    *cert_len = (size_t)read_len;
+    return AICAM_OK;
+}
+
+aicam_result_t json_config_set_webhook_ca_cert(const char *cert_data, size_t cert_len)
+{
+    if (!cert_data || cert_len == 0) return AICAM_ERROR_INVALID_PARAM;
+
+    void *fd = flash_lfs_fopen(WEBHOOK_CA_CERT_PATH, "w");
+    if (!fd) {
+        LOG_CORE_ERROR("Failed to open webhook CA cert file for writing");
+        return AICAM_ERROR;
+    }
+
+    int written = flash_lfs_fwrite(fd, cert_data, cert_len);
+    flash_lfs_fclose(fd);
+
+    if (written != (int)cert_len) {
+        LOG_CORE_ERROR("Failed to write webhook CA cert file (%d/%zu)", written, cert_len);
+        flash_lfs_remove(WEBHOOK_CA_CERT_PATH);
+        return AICAM_ERROR;
+    }
+
+    aicam_result_t result = json_config_nvs_write_string(NVS_KEY_WEBHOOK_CA_CERT_PATH, WEBHOOK_CA_CERT_PATH);
+    if (result != AICAM_OK) {
+        LOG_CORE_ERROR("Failed to save webhook CA cert path to NVS");
+        return result;
+    }
+
+    LOG_CORE_INFO("Webhook CA certificate saved to %s (%zu bytes)", WEBHOOK_CA_CERT_PATH, cert_len);
+    return AICAM_OK;
+}
+
+aicam_result_t json_config_delete_webhook_ca_cert(void)
+{
+    char path[128] = {0};
+    json_config_nvs_read_string(NVS_KEY_WEBHOOK_CA_CERT_PATH, path, sizeof(path));
+
+    if (path[0]) {
+        flash_lfs_remove(path);
+    }
+
+    json_config_nvs_write_string(NVS_KEY_WEBHOOK_CA_CERT_PATH, "");
+    LOG_CORE_INFO("Webhook CA certificate deleted");
+    return AICAM_OK;
 }
 
 // save device service image configuration to NVS
@@ -1045,31 +1184,67 @@ aicam_result_t json_config_get_video_stream_mode(video_stream_mode_config_t *con
     
     result = json_config_nvs_read_string(NVS_KEY_RTMP_STREAM_KEY, config->rtmp_stream_key, sizeof(config->rtmp_stream_key));
     if (result != AICAM_OK) config->rtmp_stream_key[0] = '\0';
-    
+
+    // RTSP server configuration
+    result = json_config_nvs_read_bool(NVS_KEY_RTSP_ENABLE, &temp_bool);
+    if (result == AICAM_OK) config->rtsp_enable = temp_bool;
+
+    {
+        uint32_t temp_port;
+        result = json_config_nvs_read_uint32(NVS_KEY_RTSP_PORT, &temp_port);
+        if (result == AICAM_OK) config->rtsp_port = (uint16_t)temp_port;
+        else config->rtsp_port = 554;
+    }
+
+    result = json_config_nvs_read_string(NVS_KEY_RTSP_AUTH_MODE, config->rtsp_auth_mode, sizeof(config->rtsp_auth_mode));
+    if (result != AICAM_OK) snprintf(config->rtsp_auth_mode, sizeof(config->rtsp_auth_mode), "none");
+
+    result = json_config_nvs_read_string(NVS_KEY_RTSP_USERNAME, config->rtsp_username, sizeof(config->rtsp_username));
+    if (result != AICAM_OK) config->rtsp_username[0] = '\0';
+
+    result = json_config_nvs_read_string(NVS_KEY_RTSP_PASSWORD, config->rtsp_password, sizeof(config->rtsp_password));
+    if (result != AICAM_OK) config->rtsp_password[0] = '\0';
+
     return AICAM_OK;
 }
 
 aicam_result_t json_config_set_video_stream_mode(const video_stream_mode_config_t *config)
 {
     if (!config) return AICAM_ERROR_INVALID_PARAM;
-    
+
     aicam_result_t result = AICAM_OK;
-    
+
     result = json_config_nvs_write_bool(NVS_KEY_VIDEO_STREAM_MODE_ENABLE, config->enable);
     if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save video stream mode enable");
-    
+
     result = json_config_nvs_write_string(NVS_KEY_RTSP_URL, config->rtsp_server_url);
     if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTSP URL");
-    
+
     result = json_config_nvs_write_bool(NVS_KEY_RTMP_ENABLE, config->rtmp_enable);
     if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTMP enable");
-    
+
     result = json_config_nvs_write_string(NVS_KEY_RTMP_URL, config->rtmp_url);
     if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTMP URL");
-    
+
     result = json_config_nvs_write_string(NVS_KEY_RTMP_STREAM_KEY, config->rtmp_stream_key);
     if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTMP stream key");
-    
+
+    // RTSP server configuration
+    result = json_config_nvs_write_bool(NVS_KEY_RTSP_ENABLE, config->rtsp_enable);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTSP enable");
+
+    result = json_config_nvs_write_uint32(NVS_KEY_RTSP_PORT, (uint32_t)config->rtsp_port);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTSP port");
+
+    result = json_config_nvs_write_string(NVS_KEY_RTSP_AUTH_MODE, config->rtsp_auth_mode);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTSP auth mode");
+
+    result = json_config_nvs_write_string(NVS_KEY_RTSP_USERNAME, config->rtsp_username);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTSP username");
+
+    result = json_config_nvs_write_string(NVS_KEY_RTSP_PASSWORD, config->rtsp_password);
+    if (result != AICAM_OK) LOG_CORE_ERROR("Failed to save RTSP password");
+
     LOG_CORE_INFO("Video stream mode configuration saved");
     return AICAM_OK;
 }
@@ -1151,6 +1326,11 @@ aicam_result_t json_config_save_to_nvs(const aicam_global_config_t *config)
     result = json_config_save_auth_mgr_config_to_nvs(&config->auth_mgr);
     if (result != AICAM_OK)
         LOG_CORE_ERROR("Failed to save auth manager configuration to NVS");
+
+    // Save webhook configuration
+    result = json_config_save_webhook_config_to_nvs(&config->webhook_config);
+    if (result != AICAM_OK)
+        LOG_CORE_ERROR("Failed to save webhook configuration to NVS");
 
     // Flush all cache to Flash immediately after saving
     storage_nvs_flush(NVS_USER);
@@ -1361,6 +1541,23 @@ aicam_result_t json_config_load_from_nvs(aicam_global_config_t *config)
             json_config_nvs_write_string(NVS_KEY_AUTH_PASSWORD, config->auth_mgr.admin_password);
         }
     }
+
+    // Load webhook configuration
+    result = json_config_nvs_read_bool(NVS_KEY_WEBHOOK_ENABLE, &temp_bool);
+    if (result == AICAM_OK)
+        config->webhook_config.enable = temp_bool;
+
+    result = json_config_nvs_read_string(NVS_KEY_WEBHOOK_URL,
+                config->webhook_config.url, sizeof(config->webhook_config.url));
+    if (result != AICAM_OK) config->webhook_config.url[0] = '\0';
+
+    result = json_config_nvs_read_string(NVS_KEY_WEBHOOK_AUTH_TYPE,
+                config->webhook_config.auth_type, sizeof(config->webhook_config.auth_type));
+    if (result != AICAM_OK) snprintf(config->webhook_config.auth_type, sizeof(config->webhook_config.auth_type), "none");
+
+    result = json_config_nvs_read_string(NVS_KEY_WEBHOOK_SECRET,
+                config->webhook_config.secret, sizeof(config->webhook_config.secret));
+    if (result != AICAM_OK) config->webhook_config.secret[0] = '\0';
 
     // Load device service configuration - image config
     result = json_config_nvs_read_uint32(NVS_KEY_IMAGE_BRIGHTNESS, &temp_uint32);
@@ -2193,6 +2390,19 @@ aicam_result_t json_config_load_from_nvs(aicam_global_config_t *config)
         if (result != AICAM_OK)
             json_config_nvs_write_uint8(key_name, config->work_mode_config.timer_trigger.weekdays[i]);
     }
+
+    // Load timer interval mode and start time
+    result = json_config_nvs_read_uint8(NVS_KEY_TIMER_INTERVAL_MODE, &temp_uint8);
+    if (result == AICAM_OK)
+        config->work_mode_config.timer_trigger.interval_mode = temp_uint8;
+    else
+        json_config_nvs_write_uint8(NVS_KEY_TIMER_INTERVAL_MODE, config->work_mode_config.timer_trigger.interval_mode);
+
+    result = json_config_nvs_read_uint32(NVS_KEY_TIMER_START_TIME, &temp_uint32);
+    if (result == AICAM_OK)
+        config->work_mode_config.timer_trigger.start_time = temp_uint32;
+    else
+        json_config_nvs_write_uint32(NVS_KEY_TIMER_START_TIME, config->work_mode_config.timer_trigger.start_time);
 
     result = json_config_nvs_read_string(NVS_KEY_RTSP_URL, config->work_mode_config.video_stream_mode.rtsp_server_url, sizeof(config->work_mode_config.video_stream_mode.rtsp_server_url));
     if (result != AICAM_OK)
