@@ -152,17 +152,16 @@ export default function ImportFirmware({
     uploadQueueRef.current = uploadQueueRef.current
       .catch(() => undefined)
       .then(() => task(type as UploadCategory).catch(error => {
-          toast.error(error instanceof Error ? error.message : String(error));
-          throw error;
-        }))
+        toast.error(error instanceof Error ? error.message : String(error));
+        throw error;
+      }))
       .then(() => setUploadLoadings(prev => ({
-          ...prev,
-          [type as UploadCategory]: false,
-        })));
+        ...prev,
+        [type as UploadCategory]: false,
+      })));
     return uploadQueueRef.current;
   };
   const handleUpdate = async () => {
-    let upgradeSuccess = false;
     try {
       if (!appFile && !webFile && !aiModelFile && !deviceFile) {
         toast.error(
@@ -180,29 +179,20 @@ export default function ImportFirmware({
       setIsUpdateLoading(true);
       setIsImportFirmwareDialogOpen(false);
       setRestartLoading(true);
-      await restartDevice({ delay_seconds: 2 });
+      await restartDevice({ delay_seconds: 2 }, { skipErrorToast: true });
       await sleep(8000);
-      const result = await retryFetch(getDeviceInfoReq, 5000, 10);
+      const result = await retryFetch(
+        (signal) => getDeviceInfoReq({ skipErrorToast: true, signal }),
+        5000,
+        10
+      );
 
       if (result) {
-        upgradeSuccess = true;
         setIsUpdateLoading(false);
         toast.success(i18n._('sys.system_management.update_success'));
-      } else {
-        toast.warning(i18n._('sys.system_management.device_restarting'));
       }
-    } catch {
-      // Device restarting, network unreachable is expected
-      toast.warning(i18n._('sys.system_management.device_restarting'));
     } finally {
       setRestartLoading(false);
-      if (!upgradeSuccess) {
-        // Delay close mask and reload page when device unreachable
-        setTimeout(() => {
-          setIsUpdateLoading(false);
-          window.location.reload();
-        }, 3000);
-      }
     }
   };
   const onAppFileChange = (file: File) => {
